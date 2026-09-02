@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Fortunes &mdash; Survey Says!</title>
+<style>
+  :root {
+    --bg: #1a0303;
+    --board: #7a0e0e;
+    --board-dark: #500707;
+    --gold: #ffd447;
+    --text: #f5f5f7;
+    --muted: #e4b8b8;
+    --strike-red: #ff3b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% -10%, #4a0a0a 0%, var(--bg) 65%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+  }
+  header {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  header a.home {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  header a.home:hover { color: var(--gold); }
+  h1 {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    margin: 0;
+    letter-spacing: 0.03em;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(255, 212, 71, 0.35);
+    text-align: center;
+  }
+  .scores {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .score-pill {
+    background: var(--board-dark);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    padding: 0.4rem 0.8rem;
+    font-weight: 700;
+    color: var(--gold);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  .score-pill .lbl { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .stage {
+    width: 100%;
+    max-width: 760px;
+    background: var(--board);
+    border: 4px solid var(--gold);
+    border-radius: 18px;
+    padding: 2rem;
+    box-shadow: 0 0 50px rgba(255, 212, 71, 0.15);
+  }
+  .prompt {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.4rem;
+  }
+  .question {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1.35;
+  }
+
+  .board {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .slot {
+    background: var(--board-dark);
+    border: 2px solid #a83a3a;
+    border-radius: 8px;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    gap: 0.8rem;
+    perspective: 800px;
+  }
+  .slot .rank {
+    color: var(--gold);
+    font-weight: 800;
+    width: 1.6rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .slot .content {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.5s ease;
+  }
+  .slot .hidden-dots {
+    color: #d98a8a;
+    letter-spacing: 0.3em;
+    font-size: 0.9rem;
+  }
+  .slot.revealed {
+    border-color: var(--gold);
+    background: linear-gradient(90deg, #8a1414, var(--board-dark));
+    animation: flipIn 0.5s ease;
+  }
+  .slot.revealed .answer-text {
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .slot.revealed .points {
+    color: var(--gold);
+    font-weight: 800;
+    background: var(--board-dark);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  .slot.missed {
+    border-color: #5a2020;
+    background: #3a0d0d;
+    opacity: 0.75;
+  }
+  .slot.missed .answer-text { color: var(--muted); font-weight: 600; }
+  .slot.missed .points { color: var(--muted); }
+  @keyframes flipIn {
+    0% { transform: rotateX(90deg); opacity: 0.2; }
+    100% { transform: rotateX(0deg); opacity: 1; }
+  }
+
+  .strikes-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+  .strike {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 3px solid #7a2020;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: #7a2020;
+    transition: all 0.2s ease;
+  }
+  .strike.active {
+    border-color: var(--strike-red);
+    color: #fff;
+    background: var(--strike-red);
+    box-shadow: 0 0 16px rgba(255, 59, 59, 0.6);
+  }
+
+  .guess-row {
+    display: flex;
+    gap: 0.6rem;
+  }
+  .guess-row input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    border: 2px solid #a83a3a;
+    background: var(--board-dark);
+    color: var(--text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .guess-row input:focus { outline: none; border-color: var(--gold); }
+  .guess-row button {
+    background: var(--gold);
+    color: #3a0d0d;
+    border: none;
+    padding: 0 1.6rem;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .guess-row button:disabled { opacity: 0.4; cursor: default; }
+
+  .feedback {
+    text-align: center;
+    min-height: 1.6rem;
+    margin-top: 0.8rem;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .feedback.good { color: var(--gold); }
+  .feedback.bad { color: var(--strike-red); }
+
+  .next-row {
+    display: none;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+  .next-row.show { display: flex; }
+  .next-btn {
+    background: var(--gold);
+    color: #3a0d0d;
+    border: none;
+    padding: 0.7rem 1.8rem;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .finale {
+    display: none;
+    text-align: center;
+  }
+  .finale.show { display: block; }
+  .finale .total {
+    font-size: 2.4rem;
+    color: var(--gold);
+    font-weight: 800;
+    margin: 0.5rem 0 1rem;
+  }
+  .restart-btn {
+    background: var(--gold);
+    color: #3a0d0d;
+    border: none;
+    padding: 0.7rem 1.8rem;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .round-progress {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="home" href="index.html">&larr; Back</a>
+    <h1>Family Fortunes: Survey Says</h1>
+    <div class="scores">
+      <div class="score-pill"><span class="lbl">Round</span><span id="roundScore">0</span></div>
+      <div class="score-pill"><span class="lbl">Total</span><span id="totalScore">0</span></div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div id="gameArea">
+      <p class="prompt">We asked 100 respondents&hellip;</p>
+      <p class="question" id="questionText"></p>
+
+      <div class="board" id="board"></div>
+
+      <div class="strikes-row" id="strikesRow">
+        <div class="strike" data-i="0">X</div>
+        <div class="strike" data-i="1">X</div>
+        <div class="strike" data-i="2">X</div>
+      </div>
+
+      <div class="guess-row">
+        <input type="text" id="guessInput" placeholder="Type your answer&hellip;" autocomplete="off">
+        <button id="guessBtn">Guess</button>
+      </div>
+      <p class="feedback" id="feedback"></p>
+
+      <div class="next-row" id="nextRow">
+        <button class="next-btn" id="nextBtn">Next question &rarr;</button>
+      </div>
+
+      <p class="round-progress" id="roundProgress"></p>
+    </div>
+
+    <div class="finale" id="finale">
+      <p class="prompt">Game over!</p>
+      <div class="total" id="finalTotal"></div>
+      <p id="finalMessage" style="color: var(--muted);"></p>
+      <button class="restart-btn" id="restartBtn">Play again</button>
+    </div>
+  </div>
+
+<script>
+  const ROUNDS = [
+    {
+      q: "Name something you check first thing on your phone in the morning.",
+      answers: [
+        { text: "Messages/texts", points: 34, accepts: ["messages", "texts", "text messages", "sms"] },
+        { text: "The time", points: 26, accepts: ["time", "clock", "the time"] },
+        { text: "Social media", points: 18, accepts: ["social media", "instagram", "facebook", "twitter", "x"] },
+        { text: "Email", points: 14, accepts: ["email", "emails"] },
+        { text: "News", points: 8, accepts: ["news"] }
+      ]
+    },
+    {
+      q: "Name a reason someone might abandon a survey halfway through.",
+      answers: [
+        { text: "Too long", points: 38, accepts: ["too long", "length", "long", "takes too long"] },
+        { text: "Confusing questions", points: 24, accepts: ["confusing", "confusing questions", "unclear"] },
+        { text: "Got interrupted", points: 16, accepts: ["interrupted", "got busy", "distracted"] },
+        { text: "Too personal", points: 13, accepts: ["too personal", "personal questions", "privacy"] },
+        { text: "No reward/incentive", points: 9, accepts: ["no reward", "no incentive", "boring", "not interesting"] }
+      ]
+    },
+    {
+      q: "Name a way you'd like to unwind after a stressful day at work.",
+      answers: [
+        { text: "Watch TV/streaming", points: 30, accepts: ["watch tv", "tv", "netflix", "streaming", "watch a show"] },
+        { text: "Exercise", points: 22, accepts: ["exercise", "gym", "run", "workout"] },
+        { text: "Time with family/friends", points: 20, accepts: ["family", "friends", "time with family", "time with friends"] },
+        { text: "Read a book", points: 16, accepts: ["read", "reading", "book", "a book"] },
+        { text: "Have a bath/shower", points: 12, accepts: ["bath", "shower", "hot bath"] }
+      ]
+    },
+    {
+      q: "Name something that would make you leave a five-star review.",
+      answers: [
+        { text: "Fast, helpful service", points: 33, accepts: ["fast service", "helpful service", "good service", "quick service", "great service"] },
+        { text: "Product worked as expected", points: 24, accepts: ["it worked", "product worked", "as expected", "quality"] },
+        { text: "Friendly staff", points: 19, accepts: ["friendly staff", "nice staff", "friendly", "staff"] },
+        { text: "Good value for money", points: 15, accepts: ["value", "good value", "price", "cheap", "worth it"] },
+        { text: "Problem resolved quickly", points: 9, accepts: ["problem solved", "issue resolved", "resolved quickly", "sorted quickly"] }
+      ]
+    },
+    {
+      q: "Name a channel you'd use to contact customer support.",
+      answers: [
+        { text: "Live chat", points: 31, accepts: ["live chat", "chat", "chatbot"] },
+        { text: "Phone call", points: 27, accepts: ["phone", "call", "phone call", "telephone"] },
+        { text: "Email", points: 21, accepts: ["email"] },
+        { text: "Social media", points: 13, accepts: ["social media", "twitter", "facebook", "instagram", "dm"] },
+        { text: "In person/store", points: 8, accepts: ["in person", "store", "shop", "branch"] }
+      ]
+    },
+    {
+      q: "Name something that would make you trust a company more.",
+      answers: [
+        { text: "Transparency/honesty", points: 29, accepts: ["transparency", "honesty", "being honest", "transparent"] },
+        { text: "Good reviews", points: 23, accepts: ["good reviews", "reviews", "reputation"] },
+        { text: "Clear pricing", points: 20, accepts: ["clear pricing", "pricing", "no hidden fees", "price"] },
+        { text: "Fast response to issues", points: 17, accepts: ["fast response", "quick response", "responsive"] },
+        { text: "Recommendation from a friend", points: 11, accepts: ["recommendation", "friend recommended", "word of mouth"] }
+      ]
+    }
+  ];
+
+  const board = document.getElementById("board");
+  const questionText = document.getElementById("questionText");
+  const strikesRow = document.getElementById("strikesRow");
+  const guessInput = document.getElementById("guessInput");
+  const guessBtn = document.getElementById("guessBtn");
+  const feedback = document.getElementById("feedback");
+  const nextRow = document.getElementById("nextRow");
+  const nextBtn = document.getElementById("nextBtn");
+  const roundProgress = document.getElementById("roundProgress");
+  const roundScoreEl = document.getElementById("roundScore");
+  const totalScoreEl = document.getElementById("totalScore");
+  const gameArea = document.getElementById("gameArea");
+  const finale = document.getElementById("finale");
+  const finalTotal = document.getElementById("finalTotal");
+  const finalMessage = document.getElementById("finalMessage");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let roundIndex = 0;
+  let strikes = 0;
+  let roundScore = 0;
+  let totalScore = 0;
+  let revealedCount = 0;
+  let roundOver = false;
+
+  function normalize(str) {
+    return str.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+  }
+
+  function renderRound() {
+    strikes = 0;
+    roundScore = 0;
+    revealedCount = 0;
+    roundOver = false;
+
+    const round = ROUNDS[roundIndex];
+    questionText.textContent = round.q;
+    roundScoreEl.textContent = roundScore;
+    roundProgress.textContent = `Question ${roundIndex + 1} of ${ROUNDS.length}`;
+
+    board.innerHTML = "";
+    round.answers.forEach((ans, i) => {
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.dataset.index = i;
+      slot.innerHTML = `
+        <span class="rank">${i + 1}</span>
+        <div class="content">
+          <span class="hidden-dots">? ? ? ? ?</span>
+        </div>`;
+      board.appendChild(slot);
+    });
+
+    [...strikesRow.children].forEach(s => s.classList.remove("active"));
+    feedback.textContent = "";
+    feedback.className = "feedback";
+    nextRow.classList.remove("show");
+    guessInput.value = "";
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    guessInput.focus();
+  }
+
+  function revealSlot(i, ans) {
+    const slot = board.children[i];
+    slot.classList.add("revealed");
+    slot.querySelector(".content").innerHTML = `
+      <span class="answer-text">${ans.text}</span>
+      <span class="points">${ans.points}</span>`;
+  }
+
+  function endRound(won) {
+    roundOver = true;
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    const round = ROUNDS[roundIndex];
+    round.answers.forEach((ans, i) => {
+      const slot = board.children[i];
+      if (!slot.classList.contains("revealed")) {
+        slot.classList.add("missed");
+        slot.querySelector(".content").innerHTML = `
+          <span class="answer-text">${ans.text}</span>
+          <span class="points">${ans.points}</span>`;
+      }
+    });
+    totalScore += roundScore;
+    totalScoreEl.textContent = totalScore;
+    nextRow.classList.add("show");
+    nextBtn.textContent = roundIndex === ROUNDS.length - 1 ? "See final score →" : "Next question →";
+  }
+
+  function submitGuess() {
+    if (roundOver) return;
+    const raw = guessInput.value;
+    if (!raw.trim()) return;
+    const guess = normalize(raw);
+    const round = ROUNDS[roundIndex];
+
+    let matchIndex = -1;
+    round.answers.forEach((ans, i) => {
+      if (matchIndex !== -1) return;
+      const slot = board.children[i];
+      if (slot.classList.contains("revealed")) return;
+      const hit = ans.accepts.some(a => normalize(a) === guess) || normalize(ans.text) === guess;
+      if (hit) matchIndex = i;
+    });
+
+    guessInput.value = "";
+
+    if (matchIndex !== -1) {
+      const ans = round.answers[matchIndex];
+      revealSlot(matchIndex, ans);
+      roundScore += ans.points;
+      roundScoreEl.textContent = roundScore;
+      revealedCount += 1;
+      feedback.textContent = `Our survey said: "${ans.text}" — ${ans.points} points!`;
+      feedback.className = "feedback good";
+      if (revealedCount === round.answers.length) {
+        endRound(true);
+      }
+    } else {
+      strikes += 1;
+      strikesRow.children[strikes - 1].classList.add("active");
+      feedback.textContent = "Uh-uh! Not on the board.";
+      feedback.className = "feedback bad";
+      if (strikes >= 3) {
+        endRound(false);
+      }
+    }
+  }
+
+  guessBtn.addEventListener("click", submitGuess);
+  guessInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") submitGuess();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    roundIndex += 1;
+    if (roundIndex >= ROUNDS.length) {
+      gameArea.style.display = "none";
+      finale.classList.add("show");
+      finalTotal.textContent = totalScore + " points";
+      finalMessage.textContent = totalScore >= 400
+        ? "Top marks — you really know what the survey says!"
+        : "Good round — the board doesn't lie though!";
+    } else {
+      renderRound();
+    }
+  });
+
+  restartBtn.addEventListener("click", () => {
+    roundIndex = 0;
+    totalScore = 0;
+    totalScoreEl.textContent = 0;
+    finale.classList.remove("show");
+    gameArea.style.display = "";
+    renderRound();
+  });
+
+  renderRound();
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Category Board &mdash; Survey Says!</title>
+<style>
+  :root {
+    --board-blue: #060ce9;
+    --board-blue-dark: #04099e;
+    --gold: #ffd447;
+    --text: #f5f5f7;
+    --muted: #b9bbe6;
+    --bg: #020126;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+  }
+  header {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  header a.home {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  header a.home:hover { color: var(--gold); }
+  h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    text-align: center;
+    margin: 0;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(255, 212, 71, 0.4);
+  }
+  .score {
+    background: var(--board-blue-dark);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    color: var(--gold);
+    min-width: 130px;
+    text-align: center;
+  }
+  .board {
+    width: 100%;
+    max-width: 1100px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    background: var(--board-blue-dark);
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .category {
+    background: var(--board-blue);
+    color: var(--gold);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-align: center;
+    padding: 0.9rem 0.4rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+  }
+  .tile {
+    background: var(--board-blue);
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 1.6rem;
+    border: none;
+    border-radius: 6px;
+    aspect-ratio: 1.4 / 1;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+  .tile:hover:not(:disabled) {
+    background: #1c22f2;
+    transform: scale(1.03);
+  }
+  .tile:disabled {
+    background: #0a0d3f;
+    color: #383c7a;
+    cursor: default;
+  }
+  .progress {
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  /* Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 10;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--board-blue);
+    border: 3px solid var(--gold);
+    border-radius: 14px;
+    max-width: 640px;
+    width: 100%;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255, 212, 71, 0.25);
+  }
+  .modal .category-tag {
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .modal .value {
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .modal .question {
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+  .options {
+    display: grid;
+    gap: 0.6rem;
+  }
+  .option {
+    background: var(--board-blue-dark);
+    border: 2px solid #2c33cf;
+    color: var(--text);
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+  .option:hover:not(:disabled) { border-color: var(--gold); }
+  .option:disabled { cursor: default; }
+  .option .bar-fill {
+    background: linear-gradient(90deg, var(--gold), #ff8a3d);
+    height: 6px;
+    border-radius: 4px;
+    flex: 1;
+    max-width: 0;
+    transition: max-width 0.9s ease;
+  }
+  .option .pct {
+    font-weight: 700;
+    color: var(--gold);
+    min-width: 3rem;
+    text-align: right;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.6s;
+  }
+  .option.revealed .bar-fill { max-width: 120px; }
+  .option.revealed .pct { opacity: 1; }
+  .option.picked { border-color: var(--gold); background: #14169a; }
+
+  .modal .footer-row {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+  }
+  .close-btn {
+    background: var(--gold);
+    color: #1a1500;
+    border: none;
+    padding: 0.6rem 1.6rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    display: none;
+  }
+  .close-btn.show { display: inline-block; }
+
+  .finale {
+    display: none;
+    text-align: center;
+    margin-top: 2rem;
+    color: var(--gold);
+  }
+  .finale.show { display: block; }
+</style>
+</head>
+<body>
+  <header>
+    <a class="home" href="index.html">&larr; Back</a>
+    <h1>Survey Says: Category Board</h1>
+    <div class="score">Score: <span id="scoreVal">0</span></div>
+  </header>
+
+  <div class="board" id="board"></div>
+  <p class="progress" id="progress">0 of 25 answered</p>
+  <div class="finale" id="finale">
+    <h2>Board complete! 🎉</h2>
+    <p>Final score: <span id="finalScore">0</span> points across every category.</p>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="category-tag" id="modalCategory"></div>
+      <div class="value" id="modalValue"></div>
+      <div class="question" id="modalQuestion"></div>
+      <div class="options" id="modalOptions"></div>
+      <div class="footer-row">
+        <button class="close-btn" id="closeBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const CATEGORIES = [
+    {
+      name: "Customer Experience",
+      questions: [
+        { q: "How do you usually reach out when something goes wrong?", opts: ["Live chat", "Email", "Phone call", "Social media"], results: [42, 31, 19, 8] },
+        { q: "What matters most in a support interaction?", opts: ["Speed", "Friendliness", "Getting it right first time", "Follow-up"], results: [35, 22, 38, 5] },
+        { q: "How likely are you to recommend us to a friend?", opts: ["Very likely", "Somewhat likely", "Neutral", "Unlikely"], results: [48, 27, 17, 8] },
+        { q: "Which channel do you check first for updates?", opts: ["Email", "App notification", "Website", "Text message"], results: [29, 41, 18, 12] },
+        { q: "What would make you switch providers?", opts: ["Price", "Poor service", "Better features elsewhere", "Nothing"], results: [33, 40, 19, 8] }
+      ]
+    },
+    {
+      name: "Team Culture",
+      questions: [
+        { q: "What makes a great day at work for you?", opts: ["Solving a hard problem", "Good conversations", "Finishing tasks", "Learning something new"], results: [30, 25, 22, 23] },
+        { q: "How do you prefer to get feedback?", opts: ["In person", "Written", "During 1:1s", "Group retro"], results: [37, 21, 34, 8] },
+        { q: "What's most important in a teammate?", opts: ["Reliability", "Communication", "Creativity", "Positivity"], results: [41, 29, 18, 12] },
+        { q: "How often do you want team check-ins?", opts: ["Daily", "Weekly", "Bi-weekly", "Monthly"], results: [22, 46, 24, 8] },
+        { q: "What energizes you most at work?", opts: ["Autonomy", "Collaboration", "Recognition", "Progress"], results: [33, 27, 15, 25] }
+      ]
+    },
+    {
+      name: "Product Feedback",
+      questions: [
+        { q: "Which feature do you use most often?", opts: ["Dashboard", "Reports", "Notifications", "Search"], results: [39, 26, 21, 14] },
+        { q: "What's missing from the product today?", opts: ["Mobile app", "Integrations", "Automation", "Customization"], results: [28, 33, 24, 15] },
+        { q: "How do you rate the onboarding experience?", opts: ["Excellent", "Good", "Okay", "Needs work"], results: [24, 38, 26, 12] },
+        { q: "How often do you check for new updates?", opts: ["Every release", "Occasionally", "Rarely", "Never"], results: [19, 44, 27, 10] },
+        { q: "What would you pay more for?", opts: ["More storage", "Priority support", "Advanced analytics", "Nothing"], results: [21, 30, 37, 12] }
+      ]
+    },
+    {
+      name: "Remote Work",
+      questions: [
+        { q: "Where do you do your best work?", opts: ["Home office", "Coffee shop", "Co-working space", "Anywhere with wifi"], results: [52, 14, 12, 22] },
+        { q: "What's the hardest part of remote work?", opts: ["Isolation", "Communication gaps", "Distractions", "Overworking"], results: [30, 28, 20, 22] },
+        { q: "How many meetings a day is too many?", opts: ["1-2", "3-4", "5+", "Depends on the day"], results: [26, 24, 15, 35] },
+        { q: "What tool could you not live without?", opts: ["Video calls", "Chat", "Shared docs", "Task boards"], results: [31, 34, 20, 15] },
+        { q: "How do you separate work and home life?", opts: ["Set hours", "Dedicated room", "End-of-day ritual", "I don't, really"], results: [35, 27, 18, 20] }
+      ]
+    },
+    {
+      name: "Wellbeing",
+      questions: [
+        { q: "What helps you recharge after a long week?", opts: ["Exercise", "Time outdoors", "Time with friends", "Doing nothing"], results: [27, 23, 26, 24] },
+        { q: "How do you know when you need a break?", opts: ["Trouble focusing", "Irritability", "Physical fatigue", "Losing motivation"], results: [32, 21, 25, 22] },
+        { q: "What's one thing that would improve your wellbeing at work?", opts: ["Flexible hours", "Less meetings", "More recognition", "Clearer priorities"], results: [34, 26, 18, 22] },
+        { q: "How often do you take a proper lunch break?", opts: ["Every day", "Most days", "Rarely", "Never"], results: [29, 33, 25, 13] },
+        { q: "What's your go-to stress reliever?", opts: ["Music", "A walk", "Talking to someone", "A snack break"], results: [24, 33, 22, 21] }
+      ]
+    }
+  ];
+
+  const VALUES = [200, 400, 600, 800, 1000];
+
+  const board = document.getElementById("board");
+  const overlay = document.getElementById("overlay");
+  const modalCategory = document.getElementById("modalCategory");
+  const modalValue = document.getElementById("modalValue");
+  const modalQuestion = document.getElementById("modalQuestion");
+  const modalOptions = document.getElementById("modalOptions");
+  const closeBtn = document.getElementById("closeBtn");
+  const scoreVal = document.getElementById("scoreVal");
+  const progress = document.getElementById("progress");
+  const finale = document.getElementById("finale");
+  const finalScore = document.getElementById("finalScore");
+
+  let score = 0;
+  let answered = 0;
+  const TOTAL_TILES = CATEGORIES.length * VALUES.length;
+
+  CATEGORIES.forEach(cat => {
+    const catEl = document.createElement("div");
+    catEl.className = "category";
+    catEl.textContent = cat.name;
+    board.appendChild(catEl);
+  });
+
+  VALUES.forEach((value, rowIdx) => {
+    CATEGORIES.forEach((cat, colIdx) => {
+      const btn = document.createElement("button");
+      btn.className = "tile";
+      btn.textContent = "$" + value;
+      btn.addEventListener("click", () => openQuestion(colIdx, rowIdx, btn));
+      board.appendChild(btn);
+    });
+  });
+
+  function openQuestion(catIdx, valueIdx, tileBtn) {
+    const cat = CATEGORIES[catIdx];
+    const item = cat.questions[valueIdx];
+    const value = VALUES[valueIdx];
+
+    modalCategory.textContent = cat.name;
+    modalValue.textContent = "$" + value;
+    modalQuestion.textContent = item.q;
+    modalOptions.innerHTML = "";
+    closeBtn.classList.remove("show");
+
+    let locked = false;
+
+    item.opts.forEach((optText, i) => {
+      const optBtn = document.createElement("button");
+      optBtn.className = "option";
+      optBtn.innerHTML = `<span>${optText}</span><span class="bar-fill"></span><span class="pct">${item.results[i]}%</span>`;
+      optBtn.addEventListener("click", () => {
+        if (locked) return;
+        locked = true;
+        optBtn.classList.add("picked");
+        [...modalOptions.children].forEach(el => {
+          el.disabled = true;
+          setTimeout(() => el.classList.add("revealed"), 150);
+        });
+        score += value;
+        answered += 1;
+        scoreVal.textContent = score;
+        progress.textContent = answered + " of " + TOTAL_TILES + " answered";
+        tileBtn.disabled = true;
+        closeBtn.classList.add("show");
+        if (answered === TOTAL_TILES) {
+          finalScore.textContent = score;
+          setTimeout(() => finale.classList.add("show"), 800);
+        }
+      });
+      modalOptions.appendChild(optBtn);
+    });
+
+    overlay.classList.add("open");
+  }
+
+  closeBtn.addEventListener("click", () => overlay.classList.remove("open"));
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) overlay.classList.remove("open");
+  });
+</script>
+</body>
+</html>

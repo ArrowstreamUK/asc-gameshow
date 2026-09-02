@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ladder of Opinions &mdash; Survey Says!</title>
+<style>
+  :root {
+    --bg: #050318;
+    --panel: #0c0836;
+    --panel-light: #171154;
+    --gold: #ffd447;
+    --blue: #3a8bff;
+    --text: #f5f5f7;
+    --muted: #a9abd1;
+    --safe: #ffd447;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #1c1660 0%, var(--bg) 65%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+  }
+  header {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  header a.home {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  header a.home:hover { color: var(--gold); }
+  h1 {
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    margin: 0;
+    letter-spacing: 0.03em;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(255, 212, 71, 0.4);
+  }
+
+  .layout {
+    width: 100%;
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .ladder { order: -1; }
+  }
+
+  .stage {
+    background: var(--panel);
+    border: 1px solid #241c7a;
+    border-radius: 16px;
+    padding: 2rem;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+  }
+  .tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+  .question-num {
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .question {
+    font-size: 1.4rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+  @media (max-width: 560px) {
+    .options { grid-template-columns: 1fr; }
+  }
+  .option {
+    background: var(--panel-light);
+    border: 2px solid #2c33cf;
+    color: var(--text);
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    transition: border-color 0.15s ease, background 0.15s ease, opacity 0.3s ease;
+  }
+  .option .letter {
+    color: var(--gold);
+    font-weight: 800;
+  }
+  .option:hover:not(:disabled) { border-color: var(--gold); }
+  .option:disabled { cursor: default; }
+  .option.eliminated { opacity: 0; pointer-events: none; }
+  .option.locked {
+    border-color: var(--gold);
+    background: linear-gradient(90deg, #3a2f00, var(--panel-light));
+    animation: pulse 0.6s ease-in-out 2;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255, 212, 71, 0); }
+    50% { box-shadow: 0 0 18px rgba(255, 212, 71, 0.6); }
+  }
+
+  .lifelines {
+    display: flex;
+    gap: 0.7rem;
+    margin-bottom: 1.5rem;
+  }
+  .lifeline-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--panel-light);
+    border: 2px solid var(--blue);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lifeline-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .lifeline-btn:disabled { opacity: 0.25; cursor: default; }
+
+  .help-panel {
+    margin-top: 1rem;
+    background: var(--panel-light);
+    border: 1px solid #2c33cf;
+    border-radius: 10px;
+    padding: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+    display: none;
+  }
+  .help-panel.show { display: block; }
+  .help-panel .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.4rem 0;
+  }
+  .help-panel .bar-row .label { width: 26px; color: var(--gold); font-weight: 700; }
+  .help-panel .bar-row .track { flex: 1; background: #0c0836; border-radius: 4px; overflow: hidden; height: 14px; }
+  .help-panel .bar-row .fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--gold)); width: 0; transition: width 0.8s ease; }
+  .help-panel .bar-row .val { width: 34px; text-align: right; font-weight: 700; color: var(--text); }
+
+  .actions {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    display: flex;
+    gap: 0.8rem;
+    justify-content: flex-end;
+  }
+  .walk-btn {
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .walk-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .ladder {
+    background: var(--panel);
+    border: 1px solid #241c7a;
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+  }
+  .rung {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .rung .num { opacity: 0.7; }
+  .rung.safe { color: var(--gold); font-weight: 700; }
+  .rung.current {
+    background: var(--panel-light);
+    color: var(--gold);
+    font-weight: 800;
+    border: 1px solid var(--gold);
+  }
+  .rung.passed { color: #4dd88a; }
+
+  .finale {
+    display: none;
+    text-align: center;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+  .finale.show { display: flex; }
+  .finale .amount {
+    font-size: 2.4rem;
+    color: var(--gold);
+    font-weight: 800;
+  }
+  .restart-btn {
+    margin-top: 1rem;
+    background: var(--gold);
+    color: #1a1500;
+    border: none;
+    padding: 0.7rem 1.6rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="home" href="index.html">&larr; Back</a>
+    <h1>Ladder of Opinions</h1>
+    <div></div>
+  </header>
+
+  <div class="layout">
+    <div class="stage" id="stage">
+      <p class="tagline">There's no wrong answer here &mdash; just see how far you'll go.</p>
+
+      <div class="lifelines">
+        <button class="lifeline-btn" id="fiftyBtn" title="50:50 &mdash; narrow it down">50:50</button>
+        <button class="lifeline-btn" id="audienceBtn" title="Ask the Audience">👥</button>
+        <button class="lifeline-btn" id="friendBtn" title="Phone a Friend">📞</button>
+      </div>
+
+      <div id="questionArea">
+        <div class="question-num" id="questionNum">Question 1 of 15</div>
+        <div class="question" id="questionText"></div>
+        <div class="options" id="optionsArea"></div>
+        <div class="help-panel" id="helpPanel"></div>
+      </div>
+
+      <div class="finale" id="finale">
+        <div class="amount" id="finaleAmount"></div>
+        <p id="finaleMessage"></p>
+        <button class="restart-btn" id="restartBtn">Play again</button>
+      </div>
+
+      <div class="actions" id="actionsRow">
+        <button class="walk-btn" id="walkBtn">Walk away</button>
+      </div>
+    </div>
+
+    <div class="ladder" id="ladder"></div>
+  </div>
+
+<script>
+  const QUESTIONS = [
+    { q: "What's the first thing you do when you wake up?", opts: ["Check your phone", "Make coffee/tea", "Exercise", "Hit snooze"], results: [46, 24, 12, 18] },
+    { q: "Which best describes your ideal weekend?", opts: ["Outdoors", "Socializing", "Relaxing at home", "Catching up on projects"], results: [29, 25, 33, 13] },
+    { q: "How do you prefer to learn something new?", opts: ["Video", "Reading", "Hands-on practice", "Asking someone"], results: [34, 22, 31, 13] },
+    { q: "What's your biggest productivity killer?", opts: ["Notifications", "Meetings", "Multitasking", "Procrastination"], results: [31, 27, 18, 24] },
+    { q: "Which would you rather give up for a month?", opts: ["Social media", "Coffee", "TV/streaming", "Takeout food"], results: [38, 14, 30, 18] },
+    { q: "What motivates you most at work?", opts: ["Impact", "Growth", "Recognition", "Compensation"], results: [33, 29, 14, 24] },
+    { q: "How do you make big decisions?", opts: ["Gut instinct", "Pros and cons list", "Ask others", "Sleep on it"], results: [26, 30, 17, 27] },
+    { q: "What's your relationship with your inbox?", opts: ["Inbox zero always", "Organized folders", "Controlled chaos", "It's a warzone"], results: [21, 24, 33, 22] },
+    { q: "Which trait do you value most in a leader?", opts: ["Honesty", "Vision", "Empathy", "Decisiveness"], results: [35, 22, 27, 16] },
+    { q: "What's your go-to way to reset after a hard day?", opts: ["Exercise", "A show or book", "Talking it out", "Sleep"], results: [27, 30, 19, 24] },
+    { q: "How far ahead do you usually plan?", opts: ["Same day", "A week", "A month", "Years"], results: [18, 34, 29, 19] },
+    { q: "What's more important in a job: purpose or pay?", opts: ["Purpose, always", "Mostly purpose", "Mostly pay", "Pay, always"], results: [22, 34, 30, 14] },
+    { q: "Which change would improve your life most right now?", opts: ["More time", "More money", "Better health", "Better relationships"], results: [37, 21, 24, 18] },
+    { q: "If you could master one skill instantly, what would it be?", opts: ["Public speaking", "A language", "An instrument", "Coding"], results: [26, 29, 23, 22] },
+    { q: "Looking back, what mattered most?", opts: ["Experiences", "Relationships", "Achievements", "Growth"], results: [31, 35, 15, 19] }
+  ];
+
+  const LADDER = [
+    100, 200, 300, 500, 1000,
+    2000, 4000, 8000, 16000, 32000,
+    64000, 125000, 250000, 500000, 1000000
+  ];
+  const SAFE_HAVENS = [4, 9, 14]; // index of $1,000 and $32,000 and $1,000,000
+
+  const letters = ["A", "B", "C", "D"];
+
+  const questionNum = document.getElementById("questionNum");
+  const questionText = document.getElementById("questionText");
+  const optionsArea = document.getElementById("optionsArea");
+  const helpPanel = document.getElementById("helpPanel");
+  const ladderEl = document.getElementById("ladder");
+  const fiftyBtn = document.getElementById("fiftyBtn");
+  const audienceBtn = document.getElementById("audienceBtn");
+  const friendBtn = document.getElementById("friendBtn");
+  const walkBtn = document.getElementById("walkBtn");
+  const finale = document.getElementById("finale");
+  const finaleAmount = document.getElementById("finaleAmount");
+  const finaleMessage = document.getElementById("finaleMessage");
+  const restartBtn = document.getElementById("restartBtn");
+  const questionArea = document.getElementById("questionArea");
+  const actionsRow = document.getElementById("actionsRow");
+
+  let current = 0;
+  let lifelinesUsed = { fifty: false, audience: false, friend: false };
+  let locked = false;
+
+  function money(n) {
+    return "$" + n.toLocaleString("en-US");
+  }
+
+  function buildLadder() {
+    ladderEl.innerHTML = "";
+    LADDER.forEach((amount, i) => {
+      const row = document.createElement("div");
+      row.className = "rung";
+      row.dataset.index = i;
+      if (SAFE_HAVENS.includes(i)) row.classList.add("safe");
+      row.innerHTML = `<span class="num">${i + 1}</span><span>${money(amount)}</span>`;
+      ladderEl.appendChild(row);
+    });
+    updateLadderHighlight();
+  }
+
+  function updateLadderHighlight() {
+    [...ladderEl.children].forEach((row, i) => {
+      row.classList.remove("current", "passed");
+      if (i < current) row.classList.add("passed");
+      if (i === current) row.classList.add("current");
+    });
+  }
+
+  function renderQuestion() {
+    locked = false;
+    const item = QUESTIONS[current];
+    questionNum.textContent = `Question ${current + 1} of ${QUESTIONS.length}`;
+    questionText.textContent = item.q;
+    optionsArea.innerHTML = "";
+    helpPanel.classList.remove("show");
+    helpPanel.innerHTML = "";
+
+    item.opts.forEach((optText, i) => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.dataset.index = i;
+      btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${optText}</span>`;
+      btn.addEventListener("click", () => selectOption(btn, i));
+      optionsArea.appendChild(btn);
+    });
+
+    updateLadderHighlight();
+  }
+
+  function selectOption(btn, i) {
+    if (locked) return;
+    locked = true;
+    btn.classList.add("locked");
+    [...optionsArea.children].forEach(el => { if (el !== btn) el.disabled = true; });
+    btn.disabled = true;
+
+    setTimeout(() => {
+      current += 1;
+      if (current >= QUESTIONS.length) {
+        showFinale(LADDER[LADDER.length - 1], "You made it to the top of the ladder! 🏆");
+      } else {
+        renderQuestion();
+      }
+    }, 1400);
+  }
+
+  function showFinale(amount, message) {
+    questionArea.style.display = "none";
+    actionsRow.style.display = "none";
+    finale.classList.add("show");
+    finaleAmount.textContent = money(amount);
+    finaleMessage.textContent = message;
+  }
+
+  walkBtn.addEventListener("click", () => {
+    if (current === 0) return;
+    const amount = LADDER[current - 1];
+    showFinale(amount, "You walked away with your winnings. Nice and safe. 🙂");
+  });
+
+  restartBtn.addEventListener("click", () => {
+    current = 0;
+    lifelinesUsed = { fifty: false, audience: false, friend: false };
+    fiftyBtn.disabled = false;
+    audienceBtn.disabled = false;
+    friendBtn.disabled = false;
+    finale.classList.remove("show");
+    questionArea.style.display = "";
+    actionsRow.style.display = "";
+    buildLadder();
+    renderQuestion();
+  });
+
+  fiftyBtn.addEventListener("click", () => {
+    if (lifelinesUsed.fifty || locked) return;
+    lifelinesUsed.fifty = true;
+    fiftyBtn.disabled = true;
+    const item = QUESTIONS[current];
+    const opts = [...optionsArea.children];
+    const sorted = [...opts].sort((a, b) => item.results[a.dataset.index] - item.results[b.dataset.index]);
+    let removed = 0;
+    for (const el of sorted) {
+      if (removed >= 2) break;
+      el.classList.add("eliminated");
+      el.disabled = true;
+      removed++;
+    }
+  });
+
+  audienceBtn.addEventListener("click", () => {
+    if (lifelinesUsed.audience || locked) return;
+    lifelinesUsed.audience = true;
+    audienceBtn.disabled = true;
+    const item = QUESTIONS[current];
+    helpPanel.innerHTML = "<strong>Ask the Audience results:</strong>";
+    item.opts.forEach((opt, i) => {
+      const active = ![...optionsArea.children][i].classList.contains("eliminated");
+      if (!active) return;
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = `<span class="label">${letters[i]}</span><div class="track"><div class="fill"></div></div><span class="val">${item.results[i]}%</span>`;
+      helpPanel.appendChild(row);
+      requestAnimationFrame(() => {
+        row.querySelector(".fill").style.width = item.results[i] + "%";
+      });
+    });
+    helpPanel.classList.add("show");
+  });
+
+  const FRIEND_LINES = [
+    "\"Honestly? Go with your gut on this one.\"",
+    "\"I'd pick the one that sounds most like you.\"",
+    "\"That's tough, but I've got a good feeling about one of the middle options.\"",
+    "\"Whatever you choose, there's no wrong answer here!\"",
+    "\"I'd go with whichever one made you pause first.\""
+  ];
+
+  friendBtn.addEventListener("click", () => {
+    if (lifelinesUsed.friend || locked) return;
+    lifelinesUsed.friend = true;
+    friendBtn.disabled = true;
+    const line = FRIEND_LINES[Math.floor(Math.random() * FRIEND_LINES.length)];
+    helpPanel.innerHTML = `<strong>Your friend says:</strong><p style="margin-top:0.5rem;">${line}</p>`;
+    helpPanel.classList.add("show");
+  });
+
+  buildLadder();
+  renderQuestion();
+</script>
+</body>
+</html>
